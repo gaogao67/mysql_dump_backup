@@ -6,14 +6,13 @@
 ## ON * .* TO 'mysql_backup' @'%' IDENTIFIED BY 'mysql_backup' 
 ## WITH GRANT OPTION ;
 ##===========================================================================##
-## mysql_backup_type option:
-## ONE_BACKUP: backup all user database into one zip file
-## MORE_BACKUP: backup user database into different zip files.
+## mysql_backup_type 参数:
+## ONE_BACKUP: 将所有数据库备份到一个full-backup-yyyy-MM-dd的备份文件中
+## MORE_BACKUP: 将每个数据库备份到单独的database-name-yyyy-MM-dd的备份文件中
 
 ##===========================================================================##
-## mysql_backup_databases option:
-## ALL: backup all user databases
-## database_names: backup the specified databases 
+## mysql_backup_databases 参数:
+## 当mysql_backup_databases被指定为ALL时，备份所有用户数据库，否则备份指定的一个或多个数据库
 ##===========================================================================##
 ## mysql backup config
 mysql_exe="/data0/software/mysql/server/bin/mysql"
@@ -25,8 +24,8 @@ mysql_backup_host="127.0.0.1"
 mysql_backup_port=3306
 mysql_backup_user="mysql_backup"
 mysql_backup_password="mysql_backup"
-mysql_backup_type="MORE_BACKUP"
-mysql_backup_databases="mysql_test"
+mysql_backup_type="ONE_BACKUP"
+mysql_backup_databases="ALL"
 mysql_backup_keep_days=10
 
 ##====================================================##
@@ -90,7 +89,7 @@ function backup_single_database()
     fi
 }
 
-function backup_more_databases()
+function backup_to_more_files()
 {
 	echo "$(date "+%Y-%m-%d %H:%M:%S")  databases:${mysql_backup_databases}." >> ${mysql_backup_log}
     for database_name in ${mysql_backup_databases};
@@ -104,7 +103,7 @@ function backup_more_databases()
     done
 }
 
-function backup_all_databases()
+function backup_to_one_file()
 {
     mysql_backup_file_path="${mysql_backup_folder}""full-backup-`date -I`.sql.gz"
     echo "$(date "+%Y-%m-%d %H:%M:%S")  start to backup all databases to ${mysql_backup_file_path}" >> ${mysql_backup_log}
@@ -140,11 +139,11 @@ function backup_databases()
 		mysql_backup_databases=`${mysql_exe} --host="${mysql_backup_host}" --port=$mysql_backup_port --user="${mysql_backup_user}" --password="${mysql_backup_password}" -Ne "select concat('''',SCHEMA_NAME,'''') from information_schema.SCHEMATA where SCHEMA_NAME NOT IN ('mysql','information_schema','performance_schema','sys');"|xargs`
 	fi
 	
-    if [ "${mysql_backup_database}" == "ONE_BACKUP" ];
+    if [ "${mysql_backup_type}" == "ONE_BACKUP" ];
     then
-        backup_all_databases
+        backup_to_one_file
     else
-        backup_more_databases
+        backup_to_more_files
     fi
 }
 
